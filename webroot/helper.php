@@ -711,29 +711,29 @@ function fetchTicker() {
     ');
     if (! $stm->execute()) {
         error_log('SQL failure: getting corp/alli IDs in fetchTicker()');
-        return false;
+        return;
     }
     $missingIds = $stm->fetchAll(PDO::FETCH_ASSOC);
     
     // query ESI
     $tickers = [];
-    foreach ($missingIds as $missingIds) {
+    foreach ($missingIds as $missingId) {
         $esiHost = 'https://esi.evetech.net';
         $dataSource = 'datasource=tranquility';
-        if ($missingIds['type'] === 'alliance') {
+        if ($missingId['type'] === 'alliance') {
             $route = '/latest/alliances/';
         } else {
             $route = '/latest/corporations/';
         }
-        $result = file_get_contents($esiHost.$route.$missingIds['id'].'/?'.$dataSource);
+        $result = file_get_contents($esiHost.$route.$missingId['id'].'/?'.$dataSource);
         $json = json_decode($result); // $result may be false from file_get_contents()
         if ($json === null || $json === false) {
             error_log('ESI failure: getting corp/alli ticker fetchTicker()');
             continue;
         }
         $tickers[] = [
-            'type' => $missingIds['type'],
-            'id' => $missingIds['id'],
+            'type' => $missingId['type'],
+            'id' => $missingId['id'],
             'ticker' => $json->ticker,
         ];
     }
