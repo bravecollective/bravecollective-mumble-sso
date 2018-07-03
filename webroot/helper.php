@@ -134,14 +134,18 @@ function sso_update() {
     // ---- Character details
 
     $affiliation = character_affiliation($character_id);
-    $character_groups = core_groups(array($character_id))[(int)$character_id];
+
+
 
     $character_name = (string)$affiliation[0]['character_name'];
     $corporation_id = (int)$affiliation[0]['corporation_id'];
     $corporation_name = (string)$affiliation[0]['corporation_name'];
     $alliance_id = (int)$affiliation[0]['alliance_id'];
     $alliance_name = (string)$affiliation[0]['alliance_name'];
-    $groups = (string)$character_groups;
+
+    $characters_groups = core_groups(array($character_id));
+    $groups = isset($characters_groups[(int)$character_id]) ? (string)$characters_groups[(int)$character_id] : fetch_corp_groups($corporation_id);
+
     $mumble_username = toMumbleName($character_name);
     $updated_at = time();
 
@@ -396,7 +400,7 @@ function character_affiliation($full_character_id_array) {
 
     // Lookup character affiliations
     foreach (array_chunk($full_character_id_array, 999) as $character_id_array) {
-        $affiliation_query = '[' . implode(',', $character_id_array) . ']';
+        $affiliation_query = json_encode(array_values($character_id_array));
 
         $curl = curl_init('https://esi.evetech.net/latest/characters/affiliation/');
         curl_setopt_array($curl, array(
@@ -442,7 +446,7 @@ function character_affiliation($full_character_id_array) {
 
     // Query all ids to get their names.
     foreach (array_chunk($all_ids, 999) as $query_ids) {
-        $name_query = '[' . implode(',', $query_ids) . ']';
+        $name_query = json_encode(array_values($query_ids));
 
         $curl = curl_init('https://esi.evetech.net/latest/universe/names/');
         curl_setopt_array($curl, array(
@@ -493,9 +497,8 @@ function character_affiliation($full_character_id_array) {
     return $affiliations;
 }
 
-function core_groups($full_character_id_array) {
+function core_groups($character_id_array) {
     // Grab core groups
-    // TODO: need a bulk query endpoint in core to avoid all these queries
 
     global $cfg_core_api;
     global $cfg_core_app_id;
@@ -507,66 +510,51 @@ function core_groups($full_character_id_array) {
     if (isset($cfg_core_api) and isset($cfg_core_app_id) and isset($cfg_core_app_secret)) {
         $core_bearer = base64_encode($cfg_core_app_id . ':' . $cfg_core_app_secret);
     
-        $core_curls = array();
-        $core_curl_multi = curl_multi_init();
-    
-        foreach ($full_character_id_array as $character_id) {
-            $character_id = (int)$character_id;
-            $curl = curl_init($cfg_core_api . '/app/v1/groups/' . $character_id);
-            curl_setopt_array($curl, array(
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_MAXREDIRS => 5,
-                    CURLOPT_TIMEOUT => 30,
-                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                    CURLOPT_USERAGENT => $cfg_user_agent,
-                    CURLOPT_HTTPHEADER => array(
-                        'Authorization: Bearer ' . $core_bearer
-                    ),
-                )
-            );
-            $core_curls[$character_id] = $curl;
-            curl_multi_add_handle($core_curl_multi, $curl);
-        }
-    
-        do
-        {
-            $mrc = curl_multi_exec($core_curl_multi, $active);
-        } while ($mrc == CURLM_CALL_MULTI_PERFORM);
-    
-        while ($active && $mrc == CURLM_OK)
-        {
-            curl_multi_select($core_curl_multi);
-            do
-            {
-                $mrc = curl_multi_exec($core_curl_multi, $active);
-            } while ($mrc == CURLM_CALL_MULTI_PERFORM);
-        }
-    
-        if ($mrc != CURLM_OK) {
-            error_log("core curl_multi error: $mrc");
+        $id_query = json_encode(array_values($character_id_array));
+
+        $curl = curl_init($cfg_core_api . '/app/v1/groups');
+        curl_setopt_array($curl, array(
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_MAXREDIRS => 5,
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_USERAGENT => $cfg_user_agent,
+                CURLOPT_HTTPHEADER => array(
+                    "Authorization: Bearer $core_bearer",
+                    'Content-type: application/json',
+                    'Content-length: ' . strlen($id_query)
+                ),
+                CURLOPT_CUSTOMREQUEST => 'POST',
+                CURLOPT_POSTFIELDS => $id_query
+            )
+        );
+        $response = curl_exec($curl);
+        $error = curl_error($curl);
+        if ($error) {
+            $_SESSION['error_code'] = 62;
+            $_SESSION['error_message'] = 'Failed to retrieve core groups.';
+            error_log("Failed to retrieve core groups: $error");
             return false;
         }
-    
-        foreach ($core_curls as $character_id => $core_curl){
-            $error = curl_error($core_curls[$character_id]);
-    
-            if ($error == ''){
-                $char_response = curl_multi_getcontent($core_curls[$character_id]);
-                $char_groups_json = json_decode($char_response, 1);
-                $char_groups = array();
-                foreach ($char_groups_json as $char_group){
-                    $group_name = $char_group['name'];
-                    $char_groups[] = $group_name;
-                }
-                $groups[$character_id] = implode(',', $char_groups);
-            }
-            else {
-                error_log("Core error on $character_id: $error");
-            }
-            curl_multi_remove_handle($core_curl_multi, $core_curls[$character_id]);
-            curl_close($core_curls[$character_id]);
+        curl_close($curl);
+        $characters = json_decode($response, true);
+        if (!is_array($characters)) {
+            error_log('Neucore returned an valid response got: ' . print_r($characters, true));
+            return false;
         }
-        curl_multi_close($core_curl_multi);
+        foreach ($characters as $character) {
+            $character_id = $character['character']['id'];
+            $character_name = $character['character']['name'];
+            if ($character['groups']) {
+                $groups[$character_id] = implode(',', array_map(
+                    function($x) { return $x['name']; }, $character['groups']
+                    )
+                );
+            } else {
+                $groups[$character_id] = '';
+            }
+            error_log("Added $groups[$character_id] to $character_name");
+        }
     }
     return $groups;
 }
@@ -594,6 +582,7 @@ function character_refresh() {
         $char_id_list[] = $row['character_id'];
     }
 
+    if ($char_id_list) {
     $characters = character_affiliation($char_id_list);
     $characters_groups = core_groups($char_id_list);
     $affiliation_count = count($characters);
@@ -619,8 +608,7 @@ function character_refresh() {
         $alliance_id = (int)$character['alliance_id'];
         $alliance_name = (string)$character['alliance_name'];
         $mumble_username = toMumbleName($character_name);
-        // TODO: Is this correctly removing groups (as they're removed, from old core, etc)
-        $groups = (string)$characters_groups[(int)$character_id];
+        $groups = isset($characters_groups[$character_id]) ? (string)$characters_groups[$character_id] : fetch_corp_groups($corporation_id);
         $updated_at = time();
 
         $stm->bindValue(':character_id', $character_id);
@@ -639,7 +627,57 @@ function character_refresh() {
         }
         echo "...OK\n";
     }
-
+    } 
     return true;
+}
+
+$cachedCorporationGroups = [];
+
+function fetch_corp_groups($corporation_id) {
+    global $cachedCorporationGroups;
+    global $cfg_core_api;
+    global $cfg_core_app_id;
+    global $cfg_core_app_secret;
+    global $cfg_user_agent;
+
+    if (isset($cachedCorporationGroups[$corporation_id])) {
+        return $cachedCorporationGroups[$corporation_id];
+    }
+
+    if (isset($cfg_core_api) and isset($cfg_core_app_id) and isset($cfg_core_app_secret)) {
+        $core_bearer = base64_encode($cfg_core_app_id . ':' . $cfg_core_app_secret);
+        $curl = curl_init($cfg_core_api . '/app/v1/corp-groups/' . $corporation_id);
+        curl_setopt_array($curl, array(
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_MAXREDIRS => 5,
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_USERAGENT => $cfg_user_agent,
+                CURLOPT_HTTPHEADER => array(
+                    "Authorization: Bearer $core_bearer",
+                    'Accept: application/json',
+                )
+            )
+        );
+        $response = curl_exec($curl);
+        $error = curl_error($curl);
+        if ($error) {
+            $_SESSION['error_code'] = 63;
+            $_SESSION['error_message'] = 'Failed to retrieve corporation core groups.';
+            error_log("Failed to retrieve corporation core groups: $error");
+            return '';
+        }
+        curl_close($curl);
+        $groupsFull = json_decode($response, true);
+        $groupString = trim(array_reduce($groupsFull, function ($groupString, $groupInfo) {
+            $groupString .= $groupInfo['name'] . ',';
+            return $groupString;
+        }, ''), ', ');
+
+        $cachedCorporationGroups[$corporation_id] = $groupString;
+        return $groupString;
+    }
+
+    return '';
 }
 ?>

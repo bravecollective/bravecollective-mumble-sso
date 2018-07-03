@@ -7,7 +7,7 @@ import Ice
 try:
 	Ice.loadSlice('/usr/share/slice/Murmur.ice')
 except RuntimeError:
-	Ice.loadSlice("--all -I/usr/share/Ice-3.5.1/slice/ /usr/share/slice/Murmur.ice")
+	Ice.loadSlice("--all -I/usr/share/Ice/slice/ /usr/share/slice/Murmur.ice")
 import Murmur
 
 # -------------------------------------------------------------------------------
