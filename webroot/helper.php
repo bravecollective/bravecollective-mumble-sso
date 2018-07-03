@@ -292,7 +292,9 @@ function sso_update() {
 	    return false;
 	}
     }
-
+    
+    fetchTicker();
+    
     // ---- Success
 
     $_SESSION['error_code'] = 0;
@@ -680,4 +682,69 @@ function fetch_corp_groups($corporation_id) {
 
     return '';
 }
+
+/**
+ * Gets missing tickers.
+ */
+function fetchTicker() {
+    global $cfg_sql_url, $cfg_sql_user, $cfg_sql_pass;
+    
+    // db connection
+    try {
+        $dbr = new PDO($cfg_sql_url, $cfg_sql_user, $cfg_sql_pass);
+    } catch (PDOException $e) {
+        error_log('FAIL: Failed to connect to the database in in fetchTicker()');
+        return;
+    }
+    
+    // get missing ticker corp/alli IDs
+    $stm = $dbr->prepare('
+        SELECT "corporation" AS type, u.corporation_id AS id
+        FROM user AS u
+        LEFT JOIN ticker AS t ON t.filter = CONCAT("corporation", "-", u.corporation_id)
+        WHERE t.text IS NULL
+        UNION
+        SELECT "alliance" AS type, u.alliance_id AS id
+        FROM user AS u
+        LEFT JOIN ticker AS t ON t.filter = CONCAT("alliance", "-", u.alliance_id)
+        WHERE t.text IS NULL AND u.alliance_id IS NOT NULL
+    ');
+    if (! $stm->execute()) {
+        error_log('SQL failure: getting corp/alli IDs in fetchTicker()');
+        return;
+    }
+    $missingIds = $stm->fetchAll(PDO::FETCH_ASSOC);
+    
+    // query ESI
+    $tickers = [];
+    foreach ($missingIds as $missingId) {
+        $esiHost = 'https://esi.evetech.net';
+        $dataSource = 'datasource=tranquility';
+        if ($missingId['type'] === 'alliance') {
+            $route = '/latest/alliances/';
+        } else {
+            $route = '/latest/corporations/';
+        }
+        $result = file_get_contents($esiHost.$route.$missingId['id'].'/?'.$dataSource);
+        $json = json_decode($result); // $result may be false from file_get_contents()
+        if ($json === null || $json === false) {
+            error_log('ESI failure: getting corp/alli ticker fetchTicker()');
+            continue;
+        }
+        $tickers[] = [
+            'type' => $missingId['type'],
+            'id' => $missingId['id'],
+            'ticker' => $json->ticker,
+        ];
+    }
+    
+    // add to db
+    foreach ($tickers as $ticker) {
+        $stm = $dbr->prepare('INSERT INTO ticker (filter, text) VALUES (:filter, :text)');
+        $stm->bindValue(':filter', $ticker['type'].'-'.$ticker['id']);
+        $stm->bindValue(':text', $ticker['ticker']);
+        $stm->execute();
+    }
+}
+
 ?>
