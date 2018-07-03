@@ -11,6 +11,7 @@
     while(true) {
 	echo "Refreshing characters....\n";
 	character_refresh();
+	fetchTicker();
 	echo "done. sleeping.\n";
 	sleep(600);
     }
