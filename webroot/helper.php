@@ -686,7 +686,7 @@ function fetch_corp_groups($corporation_id) {
 /**
  * Gets missing tickers.
  */
-function fetchTicker() {
+function fetchTicker($limit = 10) {
     global $cfg_sql_url, $cfg_sql_user, $cfg_sql_pass;
     
     // db connection
@@ -707,8 +707,7 @@ function fetchTicker() {
         SELECT "alliance" AS type, u.alliance_id AS id
         FROM user AS u
         LEFT JOIN ticker AS t ON t.filter = CONCAT("alliance", "-", u.alliance_id)
-        WHERE t.text IS NULL AND u.alliance_id IS NOT NULL
-    ');
+        WHERE t.text IS NULL AND u.alliance_id IS NOT NULL LIMIT ' . intval($limit));
     if (! $stm->execute()) {
         error_log('SQL failure: getting corp/alli IDs in fetchTicker()');
         return;
