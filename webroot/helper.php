@@ -641,7 +641,7 @@ function fetch_fallback_groups($corporation_id, $alliance_id) {
     $corpGroupArray = explode(',', $corpGroups);
     $allianceGroupArray = explode(',', $allianceGroups);
     $groupsArray = array_values(array_unique(array_merge($corpGroupArray, $allianceGroupArray)));
-    return implode(',', $groupsArray);
+    return trim(implode(',', $groupsArray), ' ,');
 }
 
 function fetch_corp_groups($corporation_id) {
