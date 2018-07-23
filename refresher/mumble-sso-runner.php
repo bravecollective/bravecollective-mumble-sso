@@ -1,18 +1,18 @@
 <?php
-    define('GUEST', 23);
+define('GUEST', 23);
 
-    if (PHP_SAPI != 'cli') {
-	die("nope!");
-    }
+if (PHP_SAPI != 'cli') {
+    die("nope!");
+}
 
-    include_once('../webroot/config.php');
-    include_once('../webroot/helper.php');
+include_once('../webroot/config.php');
+include_once('../webroot/helper.php');
 
-    while(true) {
-	echo "Refreshing characters....\n";
-	character_refresh();
-	fetchTicker(50);
-	echo "done. sleeping.\n";
-	sleep(600);
-    }
+while (true) {
+    echo "Refreshing characters....\n";
+    character_refresh();
+    fetchTicker(50);
+    echo "done. sleeping.\n";
+    sleep(600);
+}
 ?>
