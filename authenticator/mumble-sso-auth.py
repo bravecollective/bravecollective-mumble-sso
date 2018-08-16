@@ -60,7 +60,7 @@ class ServerAuthenticatorI(Murmur.ServerUpdatingAuthenticator):
 
 # ---- Retrieve User
 
-		ts_min = int(time.time()) - (60 * 60 * 48)
+		ts_min = int(time.time()) - (60 * 60 * 24 * 7)
 		c = db.cursor(MySQLdb.cursors.DictCursor)
 		c.execute("SELECT * FROM user WHERE mumble_username = %s AND updated_at > %s", (name, ts_min))
 		row = c.fetchone()
