@@ -167,6 +167,12 @@ function sso_update()
     // ---- Character details
 
     $affiliation = character_affiliation(array($character_id));
+    if (!is_array($affiliation)) {
+        $_SESSION['error_code'] = 81;
+        $_SESSION['error_message'] = 'Failed to connect to EVE API try again later.';
+
+        return false;
+    }
 
     $character_name = (string)$affiliation[0]['character_name'];
     $corporation_id = (int)$affiliation[0]['corporation_id'];
@@ -375,6 +381,12 @@ function update_character($character_id)
 
     $character_id = (int)$character_id;
     $affiliation = character_affiliation([$character_id]);
+    if (!is_array($affiliation)) {
+        $_SESSION['error_code'] = 81;
+        $_SESSION['error_message'] = 'Failed to connect to EVE API, try again later.';
+
+        return false;
+    }
 
     $character_name = (string)$affiliation[0]['character_name'];
     $corporation_id = (int)$affiliation[0]['corporation_id'];
@@ -512,6 +524,7 @@ function character_affiliation($full_character_id_array)
 
         $curl = curl_init('https://esi.evetech.net/latest/characters/affiliation/');
         curl_setopt_array($curl, [
+                CURLOPT_FAILONERROR => true,
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_MAXREDIRS => 5,
                 CURLOPT_TIMEOUT => 30,
@@ -526,8 +539,7 @@ function character_affiliation($full_character_id_array)
             ]
         );
         $response = curl_exec($curl);
-        $error = curl_error($curl);
-        if ($error) {
+        if (!$response) {
             $_SESSION['error_code'] = 60;
             $_SESSION['error_message'] = 'Failed to retrieve character affiliation.';
 
@@ -559,6 +571,7 @@ function character_affiliation($full_character_id_array)
 
         $curl = curl_init('https://esi.evetech.net/latest/universe/names/');
         curl_setopt_array($curl, [
+                CURLOPT_FAILONERROR => true,
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_MAXREDIRS => 5,
                 CURLOPT_TIMEOUT => 30,
@@ -573,8 +586,7 @@ function character_affiliation($full_character_id_array)
             ]
         );
         $response = curl_exec($curl);
-        $error = curl_error($curl);
-        if ($error) {
+        if (!$response) {
             $_SESSION['error_code'] = 61;
             $_SESSION['error_message'] = 'Failed to retrieve affiliation names.';
 
@@ -634,6 +646,7 @@ function core_groups($character_id_array)
 
     $curl = curl_init($cfg_core_api . '/app/v1/groups');
     curl_setopt_array($curl, [
+            CURLOPT_FAILONERROR => true,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_MAXREDIRS => 5,
             CURLOPT_TIMEOUT => 30,
@@ -648,9 +661,8 @@ function core_groups($character_id_array)
             CURLOPT_POSTFIELDS => $id_query
         ]
     );
-    $response = curl_exec($curl);
-    $error = curl_error($curl);
-    if ($error) {
+    if (!$response) {
+        $error = curl_error($curl);
         $_SESSION['error_code'] = 62;
         $_SESSION['error_message'] = 'Failed to retrieve core groups.';
         error_log("Failed to retrieve core groups: $error");
@@ -711,6 +723,10 @@ function character_refresh()
 
     if ($char_id_list) {
         $characters = character_affiliation($char_id_list);
+        if (!is_array($characters)) {
+            echo 'FAIL: ESI request error.';
+            return false;
+        }
         $characters_groups = core_groups($char_id_list);
         $stm = $dbr->prepare('UPDATE user
                           SET character_name = :character_name,
@@ -795,6 +811,7 @@ function fetch_corp_groups($corporation_id)
         $core_bearer = base64_encode($cfg_core_app_id . ':' . $cfg_core_app_secret);
         $curl = curl_init($cfg_core_api . '/app/v1/corp-groups/' . $corporation_id);
         curl_setopt_array($curl, [
+                CURLOPT_FAILONERROR => true,
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_MAXREDIRS => 5,
                 CURLOPT_TIMEOUT => 30,
@@ -806,9 +823,8 @@ function fetch_corp_groups($corporation_id)
                 ]
             ]
         );
-        $response = curl_exec($curl);
-        $error = curl_error($curl);
-        if ($error) {
+        if (!$response) {
+            $error = curl_error($curl);
             $_SESSION['error_code'] = 63;
             $_SESSION['error_message'] = 'Failed to retrieve corporation core groups.';
             error_log("Failed to retrieve corporation core groups: $error");
@@ -851,6 +867,7 @@ function fetch_alliance_groups($alliance_id)
         $core_bearer = base64_encode($cfg_core_app_id . ':' . $cfg_core_app_secret);
         $curl = curl_init($cfg_core_api . '/app/v1/alliance-groups/' . $alliance_id);
         curl_setopt_array($curl, [
+                CURLOPT_FAILONERROR => true,
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_MAXREDIRS => 5,
                 CURLOPT_TIMEOUT => 30,
@@ -863,8 +880,8 @@ function fetch_alliance_groups($alliance_id)
             ]
         );
         $response = curl_exec($curl);
-        $error = curl_error($curl);
-        if ($error) {
+        if (!$response) {
+            $error = curl_error($curl);
             $_SESSION['error_code'] = 63;
             $_SESSION['error_message'] = 'Failed to retrieve alliance core groups.';
             error_log("Failed to retrieve alliance core groups: $error");
