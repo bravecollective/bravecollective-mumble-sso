@@ -661,6 +661,7 @@ function core_groups($character_id_array)
             CURLOPT_POSTFIELDS => $id_query
         ]
     );
+    $response = curl_exec($curl);
     if (!$response) {
         $error = curl_error($curl);
         $_SESSION['error_code'] = 62;
@@ -823,6 +824,7 @@ function fetch_corp_groups($corporation_id)
                 ]
             ]
         );
+        $response = curl_exec($curl);
         if (!$response) {
             $error = curl_error($curl);
             $_SESSION['error_code'] = 63;
