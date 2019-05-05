@@ -392,8 +392,9 @@ function update_character($character_id)
     $groups = isset($characters_groups[$character_id]) ? (string)$characters_groups[$character_id] : fetch_fallback_groups($corporation_id, $alliance_id);
 
     $updated_at = time();
+    $mumbleFullName = generateMumbleFullName($character_name, $corporation_id, $alliance_id, $groups);
 
-    $stm = $dbr->prepare('UPDATE user set character_name = :character_name, corporation_id = :corporation_id, corporation_name = :corporation_name, alliance_id = :alliance_id, alliance_name = :alliance_name, groups = :groups, updated_at = :updated_at WHERE character_id = :character_id');
+    $stm = $dbr->prepare('UPDATE user set character_name = :character_name, corporation_id = :corporation_id, corporation_name = :corporation_name, alliance_id = :alliance_id, alliance_name = :alliance_name, groups = :groups, updated_at = :updated_at, mumble_fullname = :mumble_fullname WHERE character_id = :character_id');
     $stm->bindValue(':character_id', $character_id);
     $stm->bindValue(':character_name', $character_name);
     $stm->bindValue(':corporation_id', $corporation_id);
@@ -402,6 +403,7 @@ function update_character($character_id)
     $stm->bindValue(':alliance_name', $alliance_name);
     $stm->bindValue(':groups', $groups);
     $stm->bindValue(':updated_at', $updated_at);
+    $stm->bindValue(':mumble_fullname', $mumbleFullName);
     if (!$stm->execute()) {
         $arr = $stm->ErrorInfo();
         error_log('SQL failure:' . $arr[0] . ':' . $arr[1] . ':' . $arr[2]);
@@ -732,6 +734,7 @@ function character_refresh()
                               mumble_username = :mumble_username,
                               groups = :groups,
                               updated_at = :updated_at
+                              mumble_fullname = :mumble_fullname
                           WHERE character_id = :character_id');
 
         foreach ($characters as $character) {
@@ -746,6 +749,7 @@ function character_refresh()
             $mumble_username = toMumbleName($character_name);
             $groups = isset($characters_groups[$character_id]) ? (string)$characters_groups[$character_id] : fetch_fallback_groups($corporation_id, $alliance_id);
             $updated_at = time();
+            $mumbleFullName = generateMumbleFullName($character_name, $corporation_id, $alliance_id, $groups);
 
             $stm->bindValue(':character_id', $character_id);
             $stm->bindValue(':character_name', $character_name);
@@ -756,6 +760,7 @@ function character_refresh()
             $stm->bindValue(':mumble_username', $mumble_username);
             $stm->bindValue(':groups', $groups);
             $stm->bindValue(':updated_at', $updated_at);
+            $stm->bindValue(':mumble_fullname', $mumbleFullName);
             if (!$stm->execute()) {
                 $err = $stm->ErrorInfo();
                 echo('...failed to update user: ' . $err[0] . ':' . $err[1] . ':' . $err[2] . "\n");
@@ -939,7 +944,7 @@ function fetchTicker($limit = 10)
 function addMissingTickersToDatabase($missingTickers) 
 {
     global $cfg_sql_url, $cfg_sql_user, $cfg_sql_pass;
-    
+
     try {
         $dbr = new PDO($cfg_sql_url, $cfg_sql_user, $cfg_sql_pass);
     } catch (PDOException $e) {
@@ -1015,20 +1020,26 @@ function findTicker($id, $type = 'corporation')
 
 function generateMumbleFullName($character_name, $corporation_id, $alliance_id, $groups)
 {
+    global $cfg_groups_to_tags;
+
     $groupsArray = explode(',', $groups);
 
     $corporationTicker = findTicker($corporation_id);
 
     $result = $character_name;
 
-    $result .= $corporationTicker ? (' [' . $corporationTicker . ']') : '';
+    $result .= $corporationTicker ? (' [' . $corporationTicker['text'] . ']') : '';
 
     $tag = '';
-    // Testing TAGS
-    if (in_array('alliance.command.members', $groupsArray)) {
-        $tag = 'Leadership';
+
+    foreach ($cfg_groups_to_tags as $group => $assignedTag) {
+        if (in_array($group, $groupsArray)) {
+            $tag = $assignedTag;
+            // First one wins for now
+            break;
+        }
     }
 
-    $result .= $tag ? ('(' . $tag . ')') : '';
+    $result .= $tag ? (' (' . $tag . ')') : '';
     return $result;
 }

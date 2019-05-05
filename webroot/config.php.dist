@@ -25,4 +25,8 @@ $cfg_sql_pass = 'root';
 #$cfg_core_app_id = 1;
 #$cfg_core_app_secret = 'secret';
 
+$cfg_groups_to_tags = [
+    'groupName' => 'tagName'
+];
+
 ?>
