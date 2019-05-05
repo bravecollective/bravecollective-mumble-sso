@@ -282,6 +282,17 @@ function sso_update()
 
     // ---- Update database
 
+    addMissingTickersToDatabase([
+        [
+            'type' => 'corporation',
+            'id' => $corporation_id
+        ],
+        [
+            'type' => 'alliance',
+            'id' => $alliance_id
+        ]
+    ]);
+
     $stm = $dbr->prepare('SELECT * FROM user WHERE character_id = :character_id');
     $stm->bindValue(':character_id', $character_id);
     if (!$stm->execute()) {
@@ -295,55 +306,38 @@ function sso_update()
 
     $mumble_password = krand(10);
 
+    $mumbleFullName = generateMumbleFullName($character_name, $corporation_id, $alliance_id, $groups);
+
     if ($row = $stm->fetch()) {
         if ($owner_hash == $row['owner_hash']) {
             $mumble_password = $row['mumble_password'];
         }
-        $stm = $dbr->prepare('UPDATE user set character_name = :character_name, corporation_id = :corporation_id, corporation_name = :corporation_name, alliance_id = :alliance_id, alliance_name = :alliance_name, mumble_username = :mumble_username, mumble_password = :mumble_password, groups = :groups, updated_at = :updated_at, owner_hash = :owner_hash WHERE character_id = :character_id');
-        $stm->bindValue(':character_id', $character_id);
-        $stm->bindValue(':character_name', $character_name);
-        $stm->bindValue(':corporation_id', $corporation_id);
-        $stm->bindValue(':corporation_name', $corporation_name);
-        $stm->bindValue(':alliance_id', $alliance_id);
-        $stm->bindValue(':alliance_name', $alliance_name);
-        $stm->bindValue(':mumble_username', $mumble_username);
-        $stm->bindValue(':mumble_password', $mumble_password);
-        $stm->bindValue(':groups', $groups);
-        $stm->bindValue(':updated_at', $updated_at);
-        $stm->bindValue(':owner_hash', $owner_hash);
-        if (!$stm->execute()) {
-            $_SESSION['error_code'] = 91;
-            $_SESSION['error_message'] = 'Failed to update user.';
-            $arr = $stm->ErrorInfo();
-            error_log('SQL failure:' . $arr[0] . ':' . $arr[1] . ':' . $arr[2]);
-
-            return false;
-        }
+        $stm = $dbr->prepare('UPDATE user set character_name = :character_name, corporation_id = :corporation_id, corporation_name = :corporation_name, alliance_id = :alliance_id, alliance_name = :alliance_name, mumble_username = :mumble_username, mumble_password = :mumble_password, groups = :groups, updated_at = :updated_at, owner_hash = :owner_hash, mumble_fullname = :mumble_fullname WHERE character_id = :character_id');
     } else {
-        $stm = $dbr->prepare('INSERT INTO user (character_id, character_name, corporation_id, corporation_name, alliance_id, alliance_name, mumble_username, mumble_password, groups, created_at, updated_at, owner_hash) VALUES (:character_id, :character_name, :corporation_id, :corporation_name, :alliance_id, :alliance_name, :mumble_username, :mumble_password, :groups, :created_at, :updated_at, :owner_hash)');
-        $stm->bindValue(':character_id', $character_id);
-        $stm->bindValue(':character_name', $character_name);
-        $stm->bindValue(':corporation_id', $corporation_id);
-        $stm->bindValue(':corporation_name', $corporation_name);
-        $stm->bindValue(':alliance_id', $alliance_id);
-        $stm->bindValue(':alliance_name', $alliance_name);
-        $stm->bindValue(':mumble_username', $mumble_username);
-        $stm->bindValue(':mumble_password', $mumble_password);
-        $stm->bindValue(':groups', $groups);
+        $stm = $dbr->prepare('INSERT INTO user (character_id, character_name, corporation_id, corporation_name, alliance_id, alliance_name, mumble_username, mumble_password, groups, created_at, updated_at, owner_hash, mumble_fullname) VALUES (:character_id, :character_name, :corporation_id, :corporation_name, :alliance_id, :alliance_name, :mumble_username, :mumble_password, :groups, :created_at, :updated_at, :owner_hash, :mumble_fullname)');
         $stm->bindValue(':created_at', $updated_at);
-        $stm->bindValue(':updated_at', $updated_at);
-        $stm->bindValue(':owner_hash', $owner_hash);
-        if (!$stm->execute()) {
-            $_SESSION['error_code'] = 92;
-            $_SESSION['error_message'] = 'Failed to insert user.';
-            $arr = $stm->ErrorInfo();
-            error_log('SQL failure:' . $arr[0] . ':' . $arr[1] . ':' . $arr[2]);
-
-            return false;
-        }
     }
 
-    fetchTicker();
+    $stm->bindValue(':character_id', $character_id);
+    $stm->bindValue(':character_name', $character_name);
+    $stm->bindValue(':corporation_id', $corporation_id);
+    $stm->bindValue(':corporation_name', $corporation_name);
+    $stm->bindValue(':alliance_id', $alliance_id);
+    $stm->bindValue(':alliance_name', $alliance_name);
+    $stm->bindValue(':mumble_username', $mumble_username);
+    $stm->bindValue(':mumble_password', $mumble_password);
+    $stm->bindValue(':groups', $groups);
+    $stm->bindValue(':updated_at', $updated_at);
+    $stm->bindValue(':owner_hash', $owner_hash);
+    $stm->bindValue(':mumble_fullname', $mumbleFullName);
+    if (!$stm->execute()) {
+        $_SESSION['error_code'] = 92;
+        $_SESSION['error_message'] = 'Failed to insert or update user.';
+        $arr = $stm->ErrorInfo();
+        error_log('SQL failure:' . $arr[0] . ':' . $arr[1] . ':' . $arr[2]);
+
+        return false;
+    }
 
     // ---- Success
 
@@ -939,35 +933,80 @@ function fetchTicker($limit = 10)
         return;
     }
     $missingIds = $stm->fetchAll(PDO::FETCH_ASSOC);
+    addMissingTickersToDatabase($missingIds);
+}
 
+function addMissingTickersToDatabase($missingTickers) 
+{
     // query ESI
     $tickers = [];
-    foreach ($missingIds as $missingId) {
+    foreach ($missingTickers as $missingTicker) {
+        $tickerExists = fetchTicker($missingTicker['id'], $missingTicker['type']);
+        if ($tickerExists !== false) {
+            // Already exists
+            continue;
+        }
+
         $esiHost = 'https://esi.evetech.net';
         $dataSource = 'datasource=tranquility';
-        if ($missingId['type'] === 'alliance') {
+        if ($missingTicker['type'] === 'alliance') {
             $route = '/latest/alliances/';
         } else {
             $route = '/latest/corporations/';
         }
-        $result = file_get_contents($esiHost . $route . $missingId['id'] . '/?' . $dataSource);
+        $result = file_get_contents($esiHost . $route . $missingTicker['id'] . '/?' . $dataSource);
         $json = json_decode($result); // $result may be false from file_get_contents()
         if ($json === null || $json === false) {
             error_log('ESI failure: getting corp/alliance ticker fetchTicker()');
             continue;
         }
         $tickers[] = [
-            'type' => $missingId['type'],
-            'id' => $missingId['id'],
+            'type' => $missingTicker['type'],
+            'id' => $missingTicker['id'],
             'ticker' => $json->ticker,
         ];
     }
 
     // add to db
     foreach ($tickers as $ticker) {
-        $stm = $dbr->prepare('INSERT INTO ticker (filter, text) VALUES (:filter, :text)');
+        $stm = $dbr->prepare('INSERT INTO ticker (filter, text) VALUES (:filter, :text) ON DUPLICATE KEY UPDATE text = :text');
         $stm->bindValue(':filter', $ticker['type'] . '-' . $ticker['id']);
         $stm->bindValue(':text', $ticker['ticker']);
         $stm->execute();
     }
+}
+
+function findTicker($id, $type = 'corporation')
+{
+    $stm = $dbr->prepare('SELECT * FROM ticker WHERE filter = :filter');
+    $stm->bindValue(':filter', $type . '-' . $id);
+    if (!$stm->execute()) {
+        $_SESSION['error_code'] = 97;
+        $_SESSION['error_message'] = 'Failed to query database for ticker.';
+        $arr = $stm->ErrorInfo();
+        error_log('SQL failure:' . $arr[0] . ':' . $arr[1] . ':' . $arr[2]);
+        return false;
+    }
+
+    return $stm->fetch();
+}
+
+function generateMumbleFullName($character_name, $corporation_id, $alliance_id, $groups)
+{
+    $groupsArray = explode(',', $groups);
+
+    $corporationTicker = findTicker($corporation_id);
+
+    $result = $character_name;
+
+    $result .= $corporationTicker ? (' [' . $corporationTicker . ']') : '';
+
+    $tag = '';
+    // Testing TAGS
+    if (in_array('alliance.command.members', $groupsArray)) {
+        $tag = 'Leadership';
+    }
+
+    $result .= $tag ? ('(' . $tag . ')') : '';
+    return $result;
 }
