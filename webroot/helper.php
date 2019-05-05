@@ -938,6 +938,17 @@ function fetchTicker($limit = 10)
 
 function addMissingTickersToDatabase($missingTickers) 
 {
+    global $cfg_sql_url, $cfg_sql_user, $cfg_sql_pass;
+    
+    try {
+        $dbr = new PDO($cfg_sql_url, $cfg_sql_user, $cfg_sql_pass);
+    } catch (PDOException $e) {
+        $_SESSION['error_code'] = 50;
+        $_SESSION['error_message'] = 'Failed to connect to the database.';
+
+        return false;
+    }
+
     // query ESI
     $tickers = [];
     foreach ($missingTickers as $missingTicker) {
@@ -978,6 +989,17 @@ function addMissingTickersToDatabase($missingTickers)
 
 function findTicker($id, $type = 'corporation')
 {
+    global $cfg_sql_url, $cfg_sql_user, $cfg_sql_pass;
+
+    try {
+        $dbr = new PDO($cfg_sql_url, $cfg_sql_user, $cfg_sql_pass);
+    } catch (PDOException $e) {
+        $_SESSION['error_code'] = 50;
+        $_SESSION['error_message'] = 'Failed to connect to the database.';
+
+        return false;
+    }
+
     $stm = $dbr->prepare('SELECT * FROM ticker WHERE filter = :filter');
     $stm->bindValue(':filter', $type . '-' . $id);
     if (!$stm->execute()) {
