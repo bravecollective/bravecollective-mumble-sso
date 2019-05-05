@@ -78,7 +78,7 @@ class ServerAuthenticatorI(Murmur.ServerUpdatingAuthenticator):
 		alliance_name = row['alliance_name']
 		mumble_password = row['mumble_password']
 		group_string = row['groups']
-        nick = row['mumble_fullname']
+		nick = row['mumble_fullname']
 
 		groups = []
 		groups.append('corporation-' + str(corporation_id))
