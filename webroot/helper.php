@@ -610,8 +610,8 @@ function character_affiliation($full_character_id_array)
         $affiliations[$i]['corporation_name'] = $corporation_names[$affiliations[$i]['corporation_id']];
         $affiliations[$i]['alliance_name'] = $alliance_names[$affiliations[$i]['alliance_id']];
     }
-    print 'Updating affiliations:';
-    print '$affiliations';
+    //print 'Updating affiliations:';
+    //print '$affiliations';
 
     return $affiliations;
 }
