@@ -312,9 +312,9 @@ function sso_update()
         if ($owner_hash == $row['owner_hash']) {
             $mumble_password = $row['mumble_password'];
         }
-        $stm = $dbr->prepare('UPDATE user set character_name = :character_name, corporation_id = :corporation_id, corporation_name = :corporation_name, alliance_id = :alliance_id, alliance_name = :alliance_name, mumble_username = :mumble_username, mumble_password = :mumble_password, groups = :groups, updated_at = :updated_at, owner_hash = :owner_hash, mumble_fullname = :mumble_fullname WHERE character_id = :character_id');
+        $stm = $dbr->prepare('UPDATE user set character_name = :character_name, corporation_id = :corporation_id, corporation_name = :corporation_name, alliance_id = :alliance_id, alliance_name = :alliance_name, mumble_username = :mumble_username, mumble_password = :mumble_password, `groups` = :groups, updated_at = :updated_at, owner_hash = :owner_hash, mumble_fullname = :mumble_fullname WHERE character_id = :character_id');
     } else {
-        $stm = $dbr->prepare('INSERT INTO user (character_id, character_name, corporation_id, corporation_name, alliance_id, alliance_name, mumble_username, mumble_password, groups, created_at, updated_at, owner_hash, mumble_fullname) VALUES (:character_id, :character_name, :corporation_id, :corporation_name, :alliance_id, :alliance_name, :mumble_username, :mumble_password, :groups, :created_at, :updated_at, :owner_hash, :mumble_fullname)');
+        $stm = $dbr->prepare('INSERT INTO user (character_id, character_name, corporation_id, corporation_name, alliance_id, alliance_name, mumble_username, mumble_password, `groups`, created_at, updated_at, owner_hash, mumble_fullname) VALUES (:character_id, :character_name, :corporation_id, :corporation_name, :alliance_id, :alliance_name, :mumble_username, :mumble_password, :groups, :created_at, :updated_at, :owner_hash, :mumble_fullname)');
         $stm->bindValue(':created_at', $updated_at);
     }
 
@@ -394,7 +394,7 @@ function update_character($character_id)
     $updated_at = time();
     $mumbleFullName = generateMumbleFullName($character_name, $corporation_id, $alliance_id, $groups);
 
-    $stm = $dbr->prepare('UPDATE user set character_name = :character_name, corporation_id = :corporation_id, corporation_name = :corporation_name, alliance_id = :alliance_id, alliance_name = :alliance_name, groups = :groups, updated_at = :updated_at, mumble_fullname = :mumble_fullname WHERE character_id = :character_id');
+    $stm = $dbr->prepare('UPDATE user set character_name = :character_name, corporation_id = :corporation_id, corporation_name = :corporation_name, alliance_id = :alliance_id, alliance_name = :alliance_name, `groups` = :groups, updated_at = :updated_at, mumble_fullname = :mumble_fullname WHERE character_id = :character_id');
     $stm->bindValue(':character_id', $character_id);
     $stm->bindValue(':character_name', $character_name);
     $stm->bindValue(':corporation_id', $corporation_id);
@@ -732,8 +732,8 @@ function character_refresh()
                               alliance_id = :alliance_id,
                               alliance_name = :alliance_name,
                               mumble_username = :mumble_username,
-                              groups = :groups,
-                              updated_at = :updated_at
+                              `groups` = :groups,
+                              updated_at = :updated_at,
                               mumble_fullname = :mumble_fullname
                           WHERE character_id = :character_id');
 
