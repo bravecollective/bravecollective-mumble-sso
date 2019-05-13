@@ -128,12 +128,15 @@ class ServerAuthenticatorI(Murmur.ServerUpdatingAuthenticator):
 		return (character_id, nick, groups)
 
 	    except Exception, e:
-		print("Fail: {0}".format(e))
-		return (-1, None, None)
-		raise
+			print("Fail: {0}".format(e))
+			if db:
+			    db.close()
+			sys.exit(0)
+			return (-1, None, None)
+			raise
 	    finally:
-		if db:
-		    db.close()
+			if db:
+				db.close()
 
 	def createChannel(name, server, id):
 		return -2

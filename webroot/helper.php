@@ -3,6 +3,14 @@ if (!defined('GUEST')) {
     die('go away');
 }
 
+try {
+    $DB_CONNECTION = new PDO($cfg_sql_url, $cfg_sql_user, $cfg_sql_pass);
+} catch (PDOException $e) {
+    $_SESSION['error_code'] = 50;
+    $_SESSION['error_message'] = 'Failed to connect to the database.';
+    return false;
+}
+
 /**
  * @param int $length
  * @return string
@@ -61,7 +69,7 @@ function toMumbleName($name)
  */
 function sso_update()
 {
-    global $cfg_ccp_client_id, $cfg_ccp_client_secret, $cfg_user_agent, $cfg_sql_url, $cfg_sql_user, $cfg_sql_pass, $cfg_restrict_access_by_ticker, $_SESSION, $_GET;
+    global $cfg_ccp_client_id, $cfg_ccp_client_secret, $cfg_user_agent, $DB_CONNECTION, $cfg_restrict_access_by_ticker, $_SESSION, $_GET;
 
     // ---- Check parameters
 
@@ -153,17 +161,6 @@ function sso_update()
     $character_id = $json->CharacterID;
     $owner_hash = $json->CharacterOwnerHash;
 
-    // ---- Database
-
-    try {
-        $dbr = new PDO($cfg_sql_url, $cfg_sql_user, $cfg_sql_pass);
-    } catch (PDOException $e) {
-        $_SESSION['error_code'] = 50;
-        $_SESSION['error_message'] = 'Failed to connect to the database.';
-
-        return false;
-    }
-
     // ---- Character details
 
     $affiliation = character_affiliation(array($character_id));
@@ -189,7 +186,7 @@ function sso_update()
     // ---- Access Restrictions
 
     if ($cfg_restrict_access_by_ticker > 0) {
-        $stm = $dbr->prepare('SELECT * FROM ticker WHERE filter = :filter');
+        $stm = $DB_CONNECTION->prepare('SELECT * FROM ticker WHERE filter = :filter');
         $stm->bindValue(':filter', 'alliance-' . $alliance_id);
         if (!$stm->execute()) {
             $_SESSION['error_code'] = 70;
@@ -201,7 +198,7 @@ function sso_update()
         }
         $rowa = $stm->fetch();
 
-        $stm = $dbr->prepare('SELECT * FROM ticker WHERE filter = :filter');
+        $stm = $DB_CONNECTION->prepare('SELECT * FROM ticker WHERE filter = :filter');
         $stm->bindValue(':filter', 'corporation-' . $corporation_id);
         if (!$stm->execute()) {
             $_SESSION['error_code'] = 71;
@@ -229,7 +226,7 @@ function sso_update()
 
     // ---- Banning
 
-    $stm = $dbr->prepare('SELECT * FROM ban WHERE filter = :filter');
+    $stm = $DB_CONNECTION->prepare('SELECT * FROM ban WHERE filter = :filter');
     $stm->bindValue(':filter', 'alliance-' . $alliance_id);
     if (!$stm->execute()) {
         $_SESSION['error_code'] = 80;
@@ -246,7 +243,7 @@ function sso_update()
         return false;
     }
 
-    $stm = $dbr->prepare('SELECT * FROM ban WHERE filter = :filter');
+    $stm = $DB_CONNECTION->prepare('SELECT * FROM ban WHERE filter = :filter');
     $stm->bindValue(':filter', 'corporation-' . $corporation_id);
     if (!$stm->execute()) {
         $_SESSION['error_code'] = 82;
@@ -263,7 +260,7 @@ function sso_update()
         return false;
     }
 
-    $stm = $dbr->prepare('SELECT * FROM ban WHERE filter = :filter');
+    $stm = $DB_CONNECTION->prepare('SELECT * FROM ban WHERE filter = :filter');
     $stm->bindValue(':filter', 'character-' . $character_id);
     if (!$stm->execute()) {
         $_SESSION['error_code'] = 84;
@@ -293,7 +290,7 @@ function sso_update()
         ]
     ]);
 
-    $stm = $dbr->prepare('SELECT * FROM user WHERE character_id = :character_id');
+    $stm = $DB_CONNECTION->prepare('SELECT * FROM user WHERE character_id = :character_id');
     $stm->bindValue(':character_id', $character_id);
     if (!$stm->execute()) {
         $_SESSION['error_code'] = 90;
@@ -312,9 +309,9 @@ function sso_update()
         if ($owner_hash == $row['owner_hash']) {
             $mumble_password = $row['mumble_password'];
         }
-        $stm = $dbr->prepare('UPDATE user set character_name = :character_name, corporation_id = :corporation_id, corporation_name = :corporation_name, alliance_id = :alliance_id, alliance_name = :alliance_name, mumble_username = :mumble_username, mumble_password = :mumble_password, `groups` = :groups, updated_at = :updated_at, owner_hash = :owner_hash, mumble_fullname = :mumble_fullname WHERE character_id = :character_id');
+        $stm = $DB_CONNECTION->prepare('UPDATE user set character_name = :character_name, corporation_id = :corporation_id, corporation_name = :corporation_name, alliance_id = :alliance_id, alliance_name = :alliance_name, mumble_username = :mumble_username, mumble_password = :mumble_password, `groups` = :groups, updated_at = :updated_at, owner_hash = :owner_hash, mumble_fullname = :mumble_fullname WHERE character_id = :character_id');
     } else {
-        $stm = $dbr->prepare('INSERT INTO user (character_id, character_name, corporation_id, corporation_name, alliance_id, alliance_name, mumble_username, mumble_password, `groups`, created_at, updated_at, owner_hash, mumble_fullname) VALUES (:character_id, :character_name, :corporation_id, :corporation_name, :alliance_id, :alliance_name, :mumble_username, :mumble_password, :groups, :created_at, :updated_at, :owner_hash, :mumble_fullname)');
+        $stm = $DB_CONNECTION->prepare('INSERT INTO user (character_id, character_name, corporation_id, corporation_name, alliance_id, alliance_name, mumble_username, mumble_password, `groups`, created_at, updated_at, owner_hash, mumble_fullname) VALUES (:character_id, :character_name, :corporation_id, :corporation_name, :alliance_id, :alliance_name, :mumble_username, :mumble_password, :groups, :created_at, :updated_at, :owner_hash, :mumble_fullname)');
         $stm->bindValue(':created_at', $updated_at);
     }
 
@@ -366,12 +363,7 @@ function sso_update()
  */
 function update_character($character_id)
 {
-    global $cfg_sql_url, $cfg_sql_user, $cfg_sql_pass;
-    try {
-        $dbr = new PDO($cfg_sql_url, $cfg_sql_user, $cfg_sql_pass);
-    } catch (PDOException $e) {
-        return false;
-    }
+    global $DB_CONNECTION;
 
     $character_id = (int)$character_id;
     $affiliation = character_affiliation([$character_id]);
@@ -394,7 +386,7 @@ function update_character($character_id)
     $updated_at = time();
     $mumbleFullName = generateMumbleFullName($character_name, $corporation_id, $alliance_id, $groups);
 
-    $stm = $dbr->prepare('UPDATE user set character_name = :character_name, corporation_id = :corporation_id, corporation_name = :corporation_name, alliance_id = :alliance_id, alliance_name = :alliance_name, `groups` = :groups, updated_at = :updated_at, mumble_fullname = :mumble_fullname WHERE character_id = :character_id');
+    $stm = $DB_CONNECTION->prepare('UPDATE user set character_name = :character_name, corporation_id = :corporation_id, corporation_name = :corporation_name, alliance_id = :alliance_id, alliance_name = :alliance_name, `groups` = :groups, updated_at = :updated_at, mumble_fullname = :mumble_fullname WHERE character_id = :character_id');
     $stm->bindValue(':character_id', $character_id);
     $stm->bindValue(':character_name', $character_name);
     $stm->bindValue(':corporation_id', $corporation_id);
@@ -419,7 +411,7 @@ function update_character($character_id)
  */
 function pass_update()
 {
-    global $cfg_sql_url, $cfg_sql_user, $cfg_sql_pass, $_SESSION, $_GET;
+    global $DB_CONNECTION, $_SESSION, $_GET;
 
     // ---- Verify access
 
@@ -451,22 +443,11 @@ function pass_update()
         return false;
     }
 
-    // ---- Database
-
-    try {
-        $dbr = new PDO($cfg_sql_url, $cfg_sql_user, $cfg_sql_pass);
-    } catch (PDOException $e) {
-        $_SESSION['error_code'] = 104;
-        $_SESSION['error_message'] = 'Failed to connect to the database.';
-
-        return false;
-    }
-
     // ---- Update user
 
     $mumble_password = krand(10);
 
-    $stm = $dbr->prepare('UPDATE user SET mumble_password = :mumble_password WHERE character_id = :character_id');
+    $stm = $DB_CONNECTION->prepare('UPDATE user SET mumble_password = :mumble_password WHERE character_id = :character_id');
     $stm->bindValue(':character_id', $character_id);
     $stm->bindValue(':mumble_password', $mumble_password);
 
@@ -695,17 +676,9 @@ function core_groups($character_id_array)
  */
 function character_refresh()
 {
-    global $cfg_sql_url, $cfg_sql_user, $cfg_sql_pass;
+    global $DB_CONNECTION;
 
-    try {
-        $dbr = new PDO($cfg_sql_url, $cfg_sql_user, $cfg_sql_pass);
-    } catch (PDOException $e) {
-        echo "FAIL: Failed to connect to the database.\n";
-        echo $e->getMessage() . "\n";
-        return false;
-    }
-
-    $stmu = $dbr->prepare('SELECT character_id FROM user WHERE updated_at < :updated_at');
+    $stmu =  $DB_CONNECTION->prepare('SELECT character_id FROM user WHERE updated_at < :updated_at');
     $stmu->bindValue(':updated_at', time() - (60 * 60 * 24));
     if (!$stmu->execute()) {
         $err = $stmu->errorInfo();
@@ -725,7 +698,7 @@ function character_refresh()
             return false;
         }
         $characters_groups = core_groups($char_id_list);
-        $stm = $dbr->prepare('UPDATE user
+        $stm = $DB_CONNECTION->prepare('UPDATE user
                           SET character_name = :character_name,
                               corporation_id = :corporation_id,
                               corporation_name = :corporation_name,
@@ -911,18 +884,10 @@ function fetch_alliance_groups($alliance_id)
  */
 function fetchTicker($limit = 10)
 {
-    global $cfg_sql_url, $cfg_sql_user, $cfg_sql_pass;
-
-    // db connection
-    try {
-        $dbr = new PDO($cfg_sql_url, $cfg_sql_user, $cfg_sql_pass);
-    } catch (PDOException $e) {
-        error_log('FAIL: Failed to connect to the database in in fetchTicker()');
-        return;
-    }
+    global $DB_CONNECTION;
 
     // get missing ticker corp/alli IDs
-    $stm = $dbr->prepare('
+    $stm = $DB_CONNECTION->prepare('
         SELECT "corporation" AS type, u.corporation_id AS id
         FROM user AS u
         LEFT JOIN ticker AS t ON t.filter = CONCAT("corporation", "-", u.corporation_id)
@@ -947,16 +912,7 @@ function fetchTicker($limit = 10)
  */
 function addMissingTickersToDatabase($missingTickers) 
 {
-    global $cfg_sql_url, $cfg_sql_user, $cfg_sql_pass;
-
-    try {
-        $dbr = new PDO($cfg_sql_url, $cfg_sql_user, $cfg_sql_pass);
-    } catch (PDOException $e) {
-        $_SESSION['error_code'] = 50;
-        $_SESSION['error_message'] = 'Failed to connect to the database.';
-
-        return false;
-    }
+    global $DB_CONNECTION;
 
     // query ESI
     $tickers = [];
@@ -989,7 +945,7 @@ function addMissingTickersToDatabase($missingTickers)
 
     // add to db
     foreach ($tickers as $ticker) {
-        $stm = $dbr->prepare('INSERT INTO ticker (filter, text) VALUES (:filter, :text) ON DUPLICATE KEY UPDATE text = :text');
+        $stm = $DB_CONNECTION->prepare('INSERT INTO ticker (filter, text) VALUES (:filter, :text) ON DUPLICATE KEY UPDATE text = :text');
         $stm->bindValue(':filter', $ticker['type'] . '-' . $ticker['id']);
         $stm->bindValue(':text', $ticker['ticker']);
         $stm->execute();
@@ -1000,18 +956,9 @@ function addMissingTickersToDatabase($missingTickers)
 
 function findTicker($id, $type = 'corporation')
 {
-    global $cfg_sql_url, $cfg_sql_user, $cfg_sql_pass;
+    global $DB_CONNECTION;
 
-    try {
-        $dbr = new PDO($cfg_sql_url, $cfg_sql_user, $cfg_sql_pass);
-    } catch (PDOException $e) {
-        $_SESSION['error_code'] = 50;
-        $_SESSION['error_message'] = 'Failed to connect to the database.';
-
-        return false;
-    }
-
-    $stm = $dbr->prepare('SELECT * FROM ticker WHERE filter = :filter');
+    $stm = $DB_CONNECTION->prepare('SELECT * FROM ticker WHERE filter = :filter');
     $stm->bindValue(':filter', $type . '-' . $id);
     if (!$stm->execute()) {
         $_SESSION['error_code'] = 97;
