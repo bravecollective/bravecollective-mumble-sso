@@ -497,7 +497,7 @@ function pass_update()
 
 /**
  * @param int[] $full_character_id_array
- * @return array
+ * @return array|false
  */
 function character_affiliation($full_character_id_array)
 {
@@ -941,6 +941,10 @@ function fetchTicker($limit = 10)
     addMissingTickersToDatabase($missingIds);
 }
 
+/**
+ * @param array $missingTickers
+ * @return bool
+ */
 function addMissingTickersToDatabase($missingTickers) 
 {
     global $cfg_sql_url, $cfg_sql_user, $cfg_sql_pass;
@@ -957,7 +961,7 @@ function addMissingTickersToDatabase($missingTickers)
     // query ESI
     $tickers = [];
     foreach ($missingTickers as $missingTicker) {
-        $tickerExists = fetchTicker($missingTicker['id'], $missingTicker['type']);
+        $tickerExists = findTicker($missingTicker['id'], $missingTicker['type']);
         if ($tickerExists !== false) {
             // Already exists
             continue;
@@ -990,6 +994,8 @@ function addMissingTickersToDatabase($missingTickers)
         $stm->bindValue(':text', $ticker['ticker']);
         $stm->execute();
     }
+
+    return true;
 }
 
 function findTicker($id, $type = 'corporation')
