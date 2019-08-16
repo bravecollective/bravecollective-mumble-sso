@@ -538,9 +538,16 @@ function character_affiliation($full_character_id_array)
     $alliance_ids = array_unique($alliance_ids, SORT_NUMERIC);
 
     $character_names = [];
+    foreach ($character_ids as $character_id) {
+        $character_info_string = file_get_contents('https://esi.evetech.net/latest/characters/' . $character_id);
+        $character_info = json_decode($character_info_string, true);
+        $character_names[$character_id] = $character_info['name'];
+    }
+
+    
     $corporation_names = [];
     $alliance_names = [];
-    $all_ids = array_merge($character_ids, $corporation_ids, $alliance_ids);
+    $all_ids = array_merge($corporation_ids, $alliance_ids);
 
     // Query all ids to get their names.
     foreach (array_chunk($all_ids, 999) as $query_ids) {

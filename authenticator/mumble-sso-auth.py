@@ -5,9 +5,11 @@ import MySQLdb, ConfigParser
 
 import Ice
 try:
-	Ice.loadSlice('/usr/share/slice/Murmur.ice')
-except RuntimeError:
-	Ice.loadSlice("--all -I/usr/share/Ice/slice/ /usr/share/slice/Murmur.ice")
+        Ice.loadSlice('-I/usr/share/Ice/slice/ /usr/share/slice/Murmur.ice')
+except RuntimeError, e:
+        print(format(e))
+        sys.exit(0)
+        Ice.loadSlice("--all -I/usr/share/Ice/slice/ /usr/share/slice/Murmur.ice")
 import Murmur
 
 # -------------------------------------------------------------------------------
@@ -189,18 +191,15 @@ if __name__ == "__main__":
     print('Starting authenticator...')
 
     ice = Ice.initialize(sys.argv)
-    meta = Murmur.MetaPrx.checkedCast(ice.stringToProxy('Meta:tcp -h 127.0.0.1 -p 6502'))
+    meta = Murmur.MetaPrx.checkedCast(ice.stringToProxy('Meta -e 1.0:tcp -h 127.0.0.1 -p 6502'))
+	print('established mumur meta')
     adapter = ice.createObjectAdapterWithEndpoints("Callback.Client", "tcp -h 127.0.0.1")
     adapter.activate()
 
-    for server in meta.getBootedServers():
-		if(server.id() != server_id):
-			continue
-
-		print("Binding to server: {0} {1}".format(id, server))
-		serverR = Murmur.ServerUpdatingAuthenticatorPrx.uncheckedCast(adapter.addWithUUID(ServerAuthenticatorI(server, adapter)))
-		server.setAuthenticator(serverR)
-		break
+    server = meta.getServer(1)
+    print("Binding to server: {0} {1}".format(server.id, server))
+    serverR = Murmur.ServerUpdatingAuthenticatorPrx.uncheckedCast(adapter.addWithUUID(ServerAuthenticatorI(server, adapter)))
+    server.setAuthenticator(serverR)
     try:
         ice.waitForShutdown()
     except KeyboardInterrupt:
