@@ -539,11 +539,10 @@ function character_affiliation($full_character_id_array)
 
     $character_names = [];
     foreach ($character_ids as $character_id) {
-        $character_info_string = file_get_contents('https://esi.evetech.net/latest/characters/' . $character_id);
+        $character_info_string = file_get_contents(sprintf('https://esi.evetech.net/latest/characters/%s/', (string)$character_id));
         $character_info = json_decode($character_info_string, true);
-        $character_names[$character_id] = $character_info['name'];
+        $character_names[(int)$character_id] = $character_info['name'];
     }
-
     
     $corporation_names = [];
     $alliance_names = [];
@@ -571,6 +570,8 @@ function character_affiliation($full_character_id_array)
         );
         $response = curl_exec($curl);
         if (!$response) {
+            // Temporary fix for ESI issue
+            continue;
             $_SESSION['error_code'] = 61;
             $_SESSION['error_message'] = 'Failed to retrieve affiliation names.';
 
@@ -593,15 +594,12 @@ function character_affiliation($full_character_id_array)
         }
     }
 
-    // Jam names into our affiliatoins array
     $affiliation_count = count($affiliations);
     for ($i = 0; $i < $affiliation_count; $i++) {
         $affiliations[$i]['character_name'] = $character_names[$affiliations[$i]['character_id']];
-        $affiliations[$i]['corporation_name'] = $corporation_names[$affiliations[$i]['corporation_id']];
-        $affiliations[$i]['alliance_name'] = $alliance_names[$affiliations[$i]['alliance_id']];
+        $affiliations[$i]['corporation_name'] = $corporation_names[$affiliations[$i]['corporation_id']] ?? '';
+        $affiliations[$i]['alliance_name'] = $alliance_names[$affiliations[$i]['alliance_id']] ?? '';
     }
-    //print 'Updating affiliations:';
-    //print '$affiliations';
 
     return $affiliations;
 }
