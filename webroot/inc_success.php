@@ -69,7 +69,8 @@
 			    <?php echo $cfg_mumble_address; ?><br>
 			    <?php echo $cfg_mumble_port; ?><br>
 			    <?php echo $_SESSION['mumble_username']; ?><br>
-			    <?php echo $_SESSION['mumble_password']; ?><a href="pass.php?n=<?php echo $_SESSION['nonce']; ?>" class="btn btn-danger btn-xs pull-right">Reset Password</a><br>
+			    <span><?php echo $_SESSION['mumble_password']; ?></span>
+			    <a href="pass.php?n=<?php echo $_SESSION['nonce']; ?>" class="btn btn-danger btn-xs pull-right">Reset Password</a><br>
 			</div>
 		    </div>
 		</div>
