@@ -2,4 +2,6 @@ authenticator/mumble-sso-auth.ini
 authenticator/mumble-sso-auth.log
 refresher/mumble-sso-runner.log
 webroot/config.php
-
+/.idea
+/.vagrant
+Vagrantfile
