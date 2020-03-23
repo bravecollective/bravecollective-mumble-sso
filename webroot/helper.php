@@ -901,7 +901,8 @@ function fetchTicker($limit = 10)
         SELECT "alliance" AS type, u.alliance_id AS id
         FROM user AS u
         LEFT JOIN ticker AS t ON t.filter = CONCAT("alliance", "-", u.alliance_id)
-        WHERE t.text IS NULL AND u.alliance_id IS NOT NULL LIMIT ' . intval($limit));
+        WHERE t.text IS NULL AND u.alliance_id IS NOT NULL AND u.alliance_id > 0
+        LIMIT ' . intval($limit));
     if (!$stm->execute()) {
         error_log('SQL failure: getting corp/alli IDs in fetchTicker()');
 
