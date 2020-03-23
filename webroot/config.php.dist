@@ -1,6 +1,9 @@
 <?php if (!defined('GUEST')) die('go away'); ?>
 <?php
 
+ini_set('log_errors', '1');
+ini_set("error_log", __DIR__ . '/../php-error-' . date('Ym') . '.log');
+
 $cfg_url_base = "http://example.org/"; // include a trailing slash - 'sso.php' will be appended as callback
 
 $cfg_restrict_access_by_ticker = 0; // IMPORTANT: This settings needs to be in sync with mumble-sso-auth.ini

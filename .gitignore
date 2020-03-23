@@ -5,3 +5,4 @@ webroot/config.php
 /.idea
 /.vagrant
 Vagrantfile
+/php-error-*.log
