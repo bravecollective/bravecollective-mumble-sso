@@ -26,7 +26,7 @@
 		</div>
 		<div class="panel-body">
 		    Install Mumble and connect to our server:<br><br>
-		    <a href="http://wiki.mumble.info/wiki/Main_Page#Download_Mumble" target="_blank" class="btn btn-primary">Download Mumble</a>
+		    <a href="https://www.mumble.info/" target="_blank" class="btn btn-primary">Download Mumble</a>
 		    &nbsp;&nbsp;&nbsp;
 <a href="
 <?php
