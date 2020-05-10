@@ -303,7 +303,7 @@ function sso_update()
 
     $mumble_password = krand(10);
 
-    $mumbleFullName = generateMumbleFullName($character_name, $corporation_id, $alliance_id, $groups);
+    $mumbleFullName = generateMumbleFullName($character_name, $corporation_id, $groups);
 
     if ($row = $stm->fetch()) {
         if ($owner_hash == $row['owner_hash']) {
@@ -384,7 +384,7 @@ function update_character($character_id)
     $groups = isset($characters_groups[$character_id]) ? (string)$characters_groups[$character_id] : fetch_fallback_groups($corporation_id, $alliance_id);
 
     $updated_at = time();
-    $mumbleFullName = generateMumbleFullName($character_name, $corporation_id, $alliance_id, $groups);
+    $mumbleFullName = generateMumbleFullName($character_name, $corporation_id, $groups);
 
     $stm = $DB_CONNECTION->prepare('UPDATE user set character_name = :character_name, corporation_id = :corporation_id, corporation_name = :corporation_name, alliance_id = :alliance_id, alliance_name = :alliance_name, `groups` = :groups, updated_at = :updated_at, mumble_fullname = :mumble_fullname WHERE character_id = :character_id');
     $stm->bindValue(':character_id', $character_id);
@@ -570,8 +570,6 @@ function character_affiliation($full_character_id_array)
         );
         $response = curl_exec($curl);
         if (!$response) {
-            // Temporary fix for ESI issue
-            continue;
             $_SESSION['error_code'] = 61;
             $_SESSION['error_message'] = 'Failed to retrieve affiliation names.';
 
@@ -727,7 +725,7 @@ function character_refresh()
             $mumble_username = toMumbleName($character_name);
             $groups = isset($characters_groups[$character_id]) ? (string)$characters_groups[$character_id] : fetch_fallback_groups($corporation_id, $alliance_id);
             $updated_at = time();
-            $mumbleFullName = generateMumbleFullName($character_name, $corporation_id, $alliance_id, $groups);
+            $mumbleFullName = generateMumbleFullName($character_name, $corporation_id, $groups);
 
             $stm->bindValue(':character_id', $character_id);
             $stm->bindValue(':character_name', $character_name);
@@ -775,6 +773,10 @@ function fetch_fallback_groups($corporation_id, $alliance_id)
  */
 function fetch_corp_groups($corporation_id)
 {
+    if ((int) $corporation_id === 0) {
+        return '';
+    }
+
     global $cachedCorporationGroups;
     global $cfg_core_api;
     global $cfg_core_app_id;
@@ -806,7 +808,7 @@ function fetch_corp_groups($corporation_id)
             $error = curl_error($curl);
             $_SESSION['error_code'] = 63;
             $_SESSION['error_message'] = 'Failed to retrieve corporation core groups.';
-            error_log("Failed to retrieve corporation core groups: $error");
+            error_log("Failed to retrieve corporation $corporation_id core groups: $error");
 
             return '';
         }
@@ -832,6 +834,10 @@ function fetch_corp_groups($corporation_id)
  */
 function fetch_alliance_groups($alliance_id)
 {
+    if ((int) $alliance_id === 0) {
+        return '';
+    }
+
     global $cachedAllianceGroups;
     global $cfg_core_api;
     global $cfg_core_app_id;
@@ -863,7 +869,7 @@ function fetch_alliance_groups($alliance_id)
             $error = curl_error($curl);
             $_SESSION['error_code'] = 63;
             $_SESSION['error_message'] = 'Failed to retrieve alliance core groups.';
-            error_log("Failed to retrieve alliance core groups: $error");
+            error_log("Failed to retrieve alliance $alliance_id core groups: $error");
 
             return '';
         }
@@ -977,7 +983,7 @@ function findTicker($id, $type = 'corporation')
     return $stm->fetch();
 }
 
-function generateMumbleFullName($character_name, $corporation_id, $alliance_id, $groups)
+function generateMumbleFullName($character_name, $corporation_id, $groups)
 {
     global $cfg_groups_to_tags;
 
