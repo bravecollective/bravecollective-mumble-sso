@@ -789,7 +789,7 @@ function fetch_corp_groups($corporation_id)
 
     if (isset($cfg_core_api) and isset($cfg_core_app_id) and isset($cfg_core_app_secret)) {
         $core_bearer = base64_encode($cfg_core_app_id . ':' . $cfg_core_app_secret);
-        $curl = curl_init($cfg_core_api . '/app/v1/corp-groups/' . $corporation_id);
+        $curl = curl_init($cfg_core_api . '/app/v2/corp-groups/' . $corporation_id);
         curl_setopt_array($curl, [
                 CURLOPT_FAILONERROR => true,
                 CURLOPT_RETURNTRANSFER => true,
@@ -808,7 +808,9 @@ function fetch_corp_groups($corporation_id)
             $error = curl_error($curl);
             $_SESSION['error_code'] = 63;
             $_SESSION['error_message'] = 'Failed to retrieve corporation core groups.';
-            error_log("Failed to retrieve corporation $corporation_id core groups: $error");
+            if (strpos($error, 'Corporation not found.') === false) { // don't log 404 not found from Core API
+                error_log("Failed to retrieve corporation $corporation_id core groups: $error");
+            }
 
             return '';
         }
@@ -850,7 +852,7 @@ function fetch_alliance_groups($alliance_id)
 
     if (isset($cfg_core_api) and isset($cfg_core_app_id) and isset($cfg_core_app_secret)) {
         $core_bearer = base64_encode($cfg_core_app_id . ':' . $cfg_core_app_secret);
-        $curl = curl_init($cfg_core_api . '/app/v1/alliance-groups/' . $alliance_id);
+        $curl = curl_init($cfg_core_api . '/app/v2/alliance-groups/' . $alliance_id);
         curl_setopt_array($curl, [
                 CURLOPT_FAILONERROR => true,
                 CURLOPT_RETURNTRANSFER => true,
@@ -869,7 +871,9 @@ function fetch_alliance_groups($alliance_id)
             $error = curl_error($curl);
             $_SESSION['error_code'] = 63;
             $_SESSION['error_message'] = 'Failed to retrieve alliance core groups.';
-            error_log("Failed to retrieve alliance $alliance_id core groups: $error");
+            if (strpos($error, 'Alliance not found.') === false) { // don't log 404 not found from Core API
+                error_log("Failed to retrieve alliance $alliance_id core groups: $error");
+            }
 
             return '';
         }
