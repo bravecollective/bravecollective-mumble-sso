@@ -192,7 +192,7 @@ if __name__ == "__main__":
 
     ice = Ice.initialize(sys.argv)
     meta = Murmur.MetaPrx.checkedCast(ice.stringToProxy('Meta -e 1.0:tcp -h 127.0.0.1 -p 6502'))
-	print('established mumur meta')
+    print('established mumur meta')
     adapter = ice.createObjectAdapterWithEndpoints("Callback.Client", "tcp -h 127.0.0.1")
     adapter.activate()
 
