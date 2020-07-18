@@ -997,18 +997,16 @@ function generateMumbleFullName($character_name, $corporation_id, $groups)
 
     $result = $character_name;
 
-    $result .= $corporationTicker ? (' [' . $corporationTicker['text'] . ']') : '';
-
-    $tag = '';
+    $appendix = $corporationTicker ? (' [' . $corporationTicker['text'] . ']') : '';
 
     foreach ($cfg_groups_to_tags as $group => $assignedTag) {
         if (in_array($group, $groupsArray)) {
-            $tag = $assignedTag;
+            $appendix = ' (' . $assignedTag . ')';
             // First one wins for now
             break;
         }
     }
 
-    $result .= $tag ? (' (' . $tag . ')') : '';
+    $result .= $appendix;
     return $result;
 }
