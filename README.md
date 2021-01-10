@@ -1,13 +1,15 @@
 Brave Collective Mumble SSO
 ===================
-[![License](http://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](https://tldrlegal.com/license/mit-license)
 
+[![License](http://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](https://tldrlegal.com/license/mit-license)
 
 What is this?
 -------------
+
 This package offers an easy to use solution managing access to a mumble server using the EVE Online Single-Sign-On mechanism.
 
-Screenshots: demo.png
+**Note**: the website to register an account is deprecated in favour of a
+[Neucore plugin](https://github.com/bravecollective/neucore-plugin-mumble).
 
 Features?
 -------------
@@ -21,7 +23,7 @@ Features?
 Requirements
 ------------------
 
-* PHP 5.x (webserver and cli)
+* PHP 5.x (~~webserver and~~ cli)
 * MySQL
 * Python 2.6.5
 * Mumble Server (murmur)
@@ -35,9 +37,9 @@ Installation
 #### CCP
 * Setup an EVE SSO application on https://developers.eveonline.com/applications
 
-#### Webserver
-* Edit `webroot/config.php`
-* Point your webserver towards the webroot directory or create a symlink
+#### ~~Webserver~~
+* ~~Edit webroot/config.php~~
+* ~~Point your webserver towards the webroot directory or create a symlink~~
 
 #### Mumble Server
 * `apt-get install mumble-server`
