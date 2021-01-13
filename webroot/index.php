@@ -1,4 +1,6 @@
 <?php
+header('Location: /index.html');
+die();
     define('GUEST', 23);
     include_once('config.php');
     include_once('helper.php');
