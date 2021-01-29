@@ -3,13 +3,13 @@ Brave Collective Mumble SSO
 
 [![License](http://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](https://tldrlegal.com/license/mit-license)
 
+**Note**: the website to register an account, and the cronjob to update all accounts are deprecated in favour of 
+[this Neucore plugin](https://github.com/bravecollective/neucore-plugin-mumble).
+
 What is this?
 -------------
 
 This package offers an easy to use solution managing access to a mumble server using the EVE Online Single-Sign-On mechanism.
-
-**Note**: the website to register an account is deprecated in favour of a
-[Neucore plugin](https://github.com/bravecollective/neucore-plugin-mumble).
 
 Features?
 -------------
@@ -23,7 +23,7 @@ Features?
 Requirements
 ------------------
 
-* PHP 5.x (~~webserver and~~ cli)
+* ~~PHP 5.x (webserver and cli)~~
 * MySQL
 * Python 2.6.5
 * Mumble Server (murmur)
@@ -54,9 +54,10 @@ ice="tcp -h 127.0.0.1 -p 6502"
 * `cd authenticator && ./run.sh`
 * It is recommended to run this script in a screen session: `screen -S mumble-sso-authenticator bash -c 'cd authenticator && ./run.sh'`
 
-#### Character Refresher
-* `cd refresher && ./run.sh`
-* It is recommended to run this script in a screen session: `screen -S mumble-sso-refresher bash -c 'cd refresher && ./run.sh'`
+#### ~~Character Refresher~~
+* ~~cd refresher && ./run.sh~~
+* ~~It is recommended to run this script in a screen session:
+  screen -S mumble-sso-refresher bash -c 'cd refresher && ./run.sh'~~
 
 License
 ------------------
